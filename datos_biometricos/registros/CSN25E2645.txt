@@ -1,0 +1,10 @@
+REFERENCIA: CSN25E2645
+FECHA CAPTURA: 2025-10-17 01:03:33
+=== DATOS HUELLA ===
+Calidad: 84%
+Minucias: 49
+Dedo: 4
+Mano: izquierda
+Dispositivo: CROSSMATCH
+Exitoso: true
+Mensaje: Huella capturada exitosamente desde CROSSMATCH

@@ -1,0 +1,14 @@
+{
+  "referencia" : "CSN25E2645",
+  "fechaCaptura" : "2025-10-17 01:03:33",
+  "huella" : {
+    "exitoso" : true,
+    "mensaje" : "Huella capturada exitosamente desde CROSSMATCH",
+    "calidad" : 84,
+    "minucias" : 49,
+    "dispositivo" : "CROSSMATCH",
+    "imagenBase64" : "mock_base64_image_data",
+    "dedo" : "4",
+    "mano" : "izquierda"
+  }
+}

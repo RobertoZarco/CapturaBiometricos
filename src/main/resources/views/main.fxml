@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.biometricos.controller.MainController"
+      spacing="20" style="-fx-background-color: #f5f5f5;">
+
+    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+    <!-- Título -->
+    <Label text="Sistema de Captura Biométrica - UMG"
+           style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+    <Separator/>
+
+    <!-- Sección 1: Búsqueda de Aspirante -->
+    <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #ddd; -fx-border-radius: 5;">
+        <Label text="Búsqueda de Aspirante" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Folio/Referencia:" style="-fx-font-weight: bold;"/>
+            <TextField fx:id="txtFolio" promptText="Ej: A202400123" style="-fx-pref-width: 200px;"/>
+            <Button fx:id="btnBuscar" text="Buscar" style="-fx-background-color: #3498db; -fx-text-fill: white;"/>
+            <Button fx:id="btnNuevo" text="Nuevo Aspirante" style="-fx-background-color: #27ae60; -fx-text-fill: white;"/>
+        </HBox>
+    </VBox>
+
+    <!-- Sección 2: Datos del Aspirante -->
+    <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #ddd; -fx-border-radius: 5;">
+        <Label text="Datos del Aspirante" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+        <GridPane hgap="10" vgap="10">
+            <columnConstraints>
+                <ColumnConstraints prefWidth="100"/>
+                <ColumnConstraints prefWidth="200"/>
+                <ColumnConstraints prefWidth="100"/>
+                <ColumnConstraints prefWidth="200"/>
+            </columnConstraints>
+
+            <Label text="Nombre:" GridPane.rowIndex="0" GridPane.columnIndex="0"
+                   style="-fx-font-weight: bold;"/>
+            <Label fx:id="lblNombre" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+            <Label text="Folio:" GridPane.rowIndex="1" GridPane.columnIndex="0"
+                   style="-fx-font-weight: bold;"/>
+            <Label fx:id="lblFolio" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+            <Label text="Referencia:" GridPane.rowIndex="2" GridPane.columnIndex="0"
+                   style="-fx-font-weight: bold;"/>
+            <Label fx:id="lblReferencia" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+            <Label text="Estatus:" GridPane.rowIndex="1" GridPane.columnIndex="2" style="-fx-font-weight: bold;"/>
+            <Label fx:id="lblEstatus" text="No registrado" GridPane.rowIndex="1" GridPane.columnIndex="3"
+                   style="-fx-text-fill: red; -fx-font-weight: bold;"/>
+        </GridPane>
+    </VBox>
+
+    <!-- Sección 3: Captura Biométrica -->
+    <VBox spacing="15" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #ddd; -fx-border-radius: 5;">
+        <Label text="Captura Biométrica" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Dispositivo:" style="-fx-font-weight: bold;"/>
+            <ComboBox fx:id="cbDispositivo" prefWidth="150"/>
+            <Button fx:id="btnCapturar" text="🖐️ CAPTURAR HUELLA"
+                    style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 14px; -fx-pref-height: 40px;"/>
+        </HBox>
+
+        <VBox spacing="5" visible="false" fx:id="panelResultados">
+            <Label text="Resultado de Captura:" style="-fx-font-weight: bold;"/>
+
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Calidad:" style="-fx-font-weight: bold;"/>
+                <ProgressBar fx:id="pbCalidad" prefWidth="150" progress="0.0"/>
+                <Label fx:id="lblCalidad" text="No evaluada"/>
+            </HBox>
+
+            <Label fx:id="lblMinucias" text="Minucias: 0 puntos extraídos"/>
+
+            <Button fx:id="btnGuardar" text="💾 GUARDAR BIOMÉTRICOS"
+                    style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-pref-width: 200px;"/>
+        </VBox>
+    </VBox>
+
+    <!-- Sección 4: Log de Eventos -->
+    <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-border-color: #ddd; -fx-border-radius: 5;">
+        <Label text="Log de Eventos" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+        <TextArea fx:id="taLog" prefHeight="100" editable="false" style="-fx-font-family: 'Monospaced';"/>
+    </VBox>
+
+</VBox>

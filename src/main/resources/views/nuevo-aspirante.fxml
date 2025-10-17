@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1"
+            prefWidth="500" prefHeight="450"
+            style="-fx-background-color: white;">
+
+    <top>
+        <VBox spacing="10" style="-fx-background-color: #2c3e50; -fx-padding: 15;">
+            <Label text="Nuevo Aspirante" style="-fx-text-fill: white; -fx-font-size: 18; -fx-font-weight: bold;" />
+            <Label text="Complete los datos del nuevo aspirante" style="-fx-text-fill: #ecf0f1;" />
+        </VBox>
+    </top>
+
+    <center>
+        <ScrollPane fitToWidth="true">
+            <VBox spacing="15" style="-fx-padding: 20;">
+                <!-- Folio -->
+                <GridPane vgap="10" hgap="10">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="30" />
+                        <ColumnConstraints percentWidth="70" />
+                    </columnConstraints>
+
+                    <Label text="Folio:*" GridPane.rowIndex="0" GridPane.columnIndex="0"
+                           style="-fx-font-weight: bold;"/>
+                    <TextField fx:id="txtFolio" GridPane.rowIndex="0" GridPane.columnIndex="1"
+                               promptText="Ingrese el folio"/>
+
+                    <Label text="Nombre Completo:*" GridPane.rowIndex="1" GridPane.columnIndex="0"
+                           style="-fx-font-weight: bold;"/>
+                    <TextField fx:id="txtNombre" GridPane.rowIndex="1" GridPane.columnIndex="1"
+                               promptText="Nombre completo del aspirante"/>
+
+                    <Label text="Email:*" GridPane.rowIndex="2" GridPane.columnIndex="0"
+                           style="-fx-font-weight: bold;"/>
+                    <TextField fx:id="txtEmail" GridPane.rowIndex="2" GridPane.columnIndex="1"
+                               promptText="correo@ejemplo.com"/>
+
+                    <Label text="Teléfono:" GridPane.rowIndex="3" GridPane.columnIndex="0"
+                           style="-fx-font-weight: bold;"/>
+                    <TextField fx:id="txtTelefono" GridPane.rowIndex="3" GridPane.columnIndex="1"
+                               promptText="Número de teléfono"/>
+
+                    <Label text="Carrera:*" GridPane.rowIndex="4" GridPane.columnIndex="0"
+                           style="-fx-font-weight: bold;"/>
+                    <ComboBox fx:id="cbCarrera" GridPane.rowIndex="4" GridPane.columnIndex="1"
+                              promptText="Seleccione carrera"/>
+
+                    <Label text="Procedencia:" GridPane.rowIndex="5" GridPane.columnIndex="0"
+                           style="-fx-font-weight: bold;"/>
+                    <TextField fx:id="txtProcedencia" GridPane.rowIndex="5" GridPane.columnIndex="1"
+                               promptText="Escuela de procedencia"/>
+                </GridPane>
+
+                <!-- Observaciones -->
+                <VBox spacing="5">
+                    <Label text="Observaciones:" style="-fx-font-weight: bold;"/>
+                    <TextArea fx:id="taObservaciones" prefRowCount="3"
+                              promptText="Observaciones adicionales..."
+                              wrapText="true"/>
+                </VBox>
+            </VBox>
+        </ScrollPane>
+    </center>
+
+    <bottom>
+        <HBox spacing="15" style="-fx-padding: 15; -fx-alignment: center-right; -fx-background-color: #ecf0f1;">
+            <Button text="Cancelar" fx:id="btnCancelar"
+                    style="-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-weight: bold;"
+                    onAction="#cancelar"/>
+            <Button text="Guardar" fx:id="btnGuardar"
+                    style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;"
+                    onAction="#guardarAspirante"/>
+        </HBox>
+    </bottom>
+
+    <padding>
+        <Insets top="0" right="0" bottom="0" left="0"/>
+    </padding>
+</BorderPane>
