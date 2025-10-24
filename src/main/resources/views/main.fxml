@@ -14,7 +14,7 @@
     <!-- Título -->
     <Label text="Sistema de Captura Biométrica - UMG"
            style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-
+    <Button fx:id="btnNuevaBusqueda" text="Nueva Búsqueda" style="-fx-background-color: #3498db; -fx-text-fill: white;" onAction="#nuevaBusqueda"/>
     <Separator/>
 
     <!-- Sección 1: Búsqueda de Aspirante -->
@@ -66,8 +66,12 @@
         <HBox spacing="10" alignment="CENTER_LEFT">
             <Label text="Dispositivo:" style="-fx-font-weight: bold;"/>
             <ComboBox fx:id="cbDispositivo" prefWidth="150"/>
-            <Button fx:id="btnCapturar" text="🖐️ CAPTURAR HUELLA"
-                    style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 14px; -fx-pref-height: 40px;"/>
+
+            <Label text="Dedo:" style="-fx-font-weight: bold;"/>
+            <ComboBox fx:id="cbDedo" prefWidth="180"/>  <!-- ← NUEVO COMBOBOX -->
+
+            <Button fx:id="btnCapturar" text="Capturar Huella" disable="true"/>
+            <Button fx:id="btnGuardar" text="Guardar Datos" disable="true"/>
         </HBox>
 
         <VBox spacing="5" visible="false" fx:id="panelResultados">

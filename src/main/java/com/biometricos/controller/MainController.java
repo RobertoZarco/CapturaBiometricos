@@ -5,6 +5,7 @@ import com.biometricos.service.AspiranteService;
 import com.biometricos.model.HuellaResponse;
 import com.biometricos.service.GestorArchivosService;
 import com.biometricos.service.HuellaClientService;
+import com.biometricos.util.MapeadorDedos;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -19,9 +20,19 @@ import org.springframework.stereotype.Controller;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+
 
 @Controller
 public class MainController {
+
+    // Cambiar de una huella a un mapa de huellas por dedo
+    private Map<Integer, HuellaResponse> huellasCapturadas = new HashMap<>();
+    private int dedoActual = MapeadorDedos.MANO_IZQUIERDA_PULGAR; // Por defecto pulgar izquierdo
+
+    // Agregar ComboBox para seleccionar dedo
+    @FXML private ComboBox<String> cbDedo;
 
     @FXML private TextField txtFolio;
     @FXML private Button btnBuscar, btnNuevo, btnCapturar, btnGuardar;
@@ -53,9 +64,12 @@ public class MainController {
     }
 
     private void configurarControles() {
-        // Configurar ComboBox
+        // Configurar ComboBox de dispositivo
         cbDispositivo.getItems().addAll("CROSSMATCH", "DIGITAL_PERSONA");
         cbDispositivo.setValue("CROSSMATCH");
+
+        // Configurar ComboBox de dedos
+        configurarComboDedos();
 
         // Event handlers
         btnBuscar.setOnAction(e -> buscarAspirante());
@@ -66,6 +80,41 @@ public class MainController {
         // Estado inicial
         panelResultados.setVisible(false);
         limpiarDatos();
+    }
+
+    private void configurarComboDedos() {
+        cbDedo.getItems().clear();
+        cbDedo.getItems().addAll(
+                "Pulgar Izquierdo (4)",
+                "Pulgar Derecho (5)",
+                "Índice Izquierdo (3)",
+                "Índice Derecho (6)",
+                "Medio Izquierdo (2)",
+                "Medio Derecho (7)",
+                "Anular Izquierdo (1)",
+                "Anular Derecho (8)",
+                "Meñique Izquierdo (0)",
+                "Meñique Derecho (9)"
+        );
+        cbDedo.setValue("Pulgar Izquierdo (4)");
+
+        // Actualizar dedoActual cuando cambie la selección
+        cbDedo.setOnAction(e -> {
+            String seleccion = cbDedo.getValue();
+            if (seleccion != null) {
+                // Extraer el número del paréntesis
+                String numeroStr = seleccion.substring(seleccion.lastIndexOf("(") + 1, seleccion.lastIndexOf(")"));
+                try {
+                    dedoActual = Integer.parseInt(numeroStr);
+                    System.out.println("🎯 Dedo seleccionado: " + dedoActual + " - " + MapeadorDedos.obtenerNombreDedo(dedoActual));
+
+                    // Mostrar huella previamente capturada si existe
+                    mostrarHuellaCapturada(dedoActual);
+                } catch (NumberFormatException ex) {
+                    System.err.println("Error parseando número de dedo: " + numeroStr);
+                }
+            }
+        });
     }
 
     private void verificarConexiones() {
@@ -93,30 +142,47 @@ public class MainController {
             return;
         }
 
+        // ✅ SI es una referencia DIFERENTE, limpiar todo
+        if (referenciaActual != null && !referenciaActual.equals(referencia)) {
+            agregarLog("🔁 Nueva referencia detectada - Limpiando datos anteriores");
+            limpiarDatos(); // Limpiar todo para nuevo aspirante
+        }
+
+        agregarLog("🔍 Buscando en BD: " + referencia);
+        btnBuscar.setDisable(true);
+
         new Thread(() -> {
             try {
-                // Buscar en la base de datos PreReg_CSDB.PreAspirante
                 Aspirante aspirante = aspiranteService.buscarPorReferencia(referencia);
 
                 Platform.runLater(() -> {
+                    btnBuscar.setDisable(false);
+
                     if (aspirante != null) {
-                        // Mostrar datos del pre-aspirante encontrado
+                        // Aspirante encontrado en BD
                         mostrarDatosAspirante(aspirante);
                         referenciaActual = referencia;
                         agregarLog("✅ Pre-Aspirante encontrado: " + aspirante.getNombre());
 
-                        // Habilitar captura biométrica
+                        // Habilitar captura pero NO limpiar huellas existentes
                         btnCapturar.setDisable(false);
+
+                        // Si ya hay huellas capturadas, mostrar resumen
+                        if (!huellasCapturadas.isEmpty()) {
+                            agregarLog("📋 Huellas capturadas previamente: " + huellasCapturadas.size());
+                            mostrarResumenHuellasCapturadas();
+                        }
                     } else {
-                        // No encontrado en PreAspirante
+                        // No encontrado en BD
+                        agregarLog("❌ No encontrado en BD");
                         mostrarConfirmacionNuevaCaptura(referencia);
                     }
                 });
+
             } catch (Exception e) {
                 Platform.runLater(() -> {
-                    agregarLog("❌ Error al buscar en BD: " + e.getMessage());
-                    // Fallback: permitir captura aunque falle la consulta
-                    prepararCapturaConReferencia(referencia);
+                    btnBuscar.setDisable(false);
+                    agregarLog("⚠️ Error al buscar en BD: " + e.getMessage());
                 });
             }
         }).start();
@@ -218,30 +284,41 @@ public class MainController {
             return;
         }
 
-        // Deshabilitar botón durante la captura
+        if (referenciaActual == null) {
+            mostrarAlerta("Error", "Primero busque una referencia válida");
+            return;
+        }
+
+        String nombreDedo = MapeadorDedos.obtenerNombreDedo(dedoActual);
+        agregarLog("📸 Capturando huella: " + nombreDedo);
         btnCapturar.setDisable(true);
-        agregarLog("Iniciando captura de huella...");
 
         new Thread(() -> {
             try {
                 String dispositivo = cbDispositivo.getValue();
-
-                // Llamar al microservicio para capturar huella
                 HuellaResponse respuesta = huellaClientService.capturarHuella(dispositivo);
 
                 Platform.runLater(() -> {
                     btnCapturar.setDisable(false);
 
                     if (respuesta != null && respuesta.isExitoso()) {
-                        huellaCapturada = respuesta;
-                        mostrarResultadosHuella(respuesta);
-                        agregarLog("✅ Huella capturada exitosamente");
+                        // ✅ Guardar en el mapa con el código del dedo actual
+                        huellasCapturadas.put(dedoActual, respuesta);
 
-                        // Habilitar guardado
-                        btnGuardar.setDisable(false);
+                        // ✅ Actualizar información del dedo en la respuesta
+                        respuesta.setDedo(String.valueOf(dedoActual));
+                        respuesta.setMano(MapeadorDedos.obtenerMano(dedoActual));
+
+                        // ✅ Llamar al método ACTUALIZADO con dos parámetros
+                        mostrarResultadosHuella(respuesta, dedoActual);
+                        agregarLog("✅ Huella capturada: " + nombreDedo);
+
+                        // Mostrar resumen de huellas capturadas
+                        mostrarResumenHuellasCapturadas();
+
                     } else {
                         String mensajeError = respuesta != null ? respuesta.getMensaje() : "Error desconocido";
-                        agregarLog("❌ Error en captura: " + mensajeError);
+                        agregarLog("❌ Error capturando " + nombreDedo + ": " + mensajeError);
                         mostrarAlerta("Error", "No se pudo capturar la huella: " + mensajeError);
                     }
                 });
@@ -258,48 +335,42 @@ public class MainController {
 
     @FXML
     private void guardarBiometricos() {
-        String referencia = txtFolio.getText().trim();
-
-        if (referencia.isEmpty()) {
+        if (referenciaActual == null || referenciaActual.isEmpty()) {
             mostrarAlerta("Error", "No hay referencia para guardar");
             return;
         }
 
-        if (huellaCapturada == null) {
-            mostrarAlerta("Error", "Primero debe capturar una huella");
+        if (huellasCapturadas.isEmpty()) {
+            mostrarAlerta("Error", "Primero debe capturar al menos una huella");
             return;
         }
 
         btnGuardar.setDisable(true);
-        agregarLog("Guardando datos biométricos...");
+        agregarLog("💾 Guardando " + huellasCapturadas.size() + " huella(s) para: " + referenciaActual);
 
         new Thread(() -> {
             try {
-                // Guardar en la estructura de carpetas
                 gestorArchivosService.guardarDatosCompletos(
-                        referencia,
-                        huellaCapturada,
-                        huellaCapturada.getImagenBase64(),
+                        referenciaActual,
+                        huellasCapturadas,
                         fotoCapturada,
                         firmaCapturada
                 );
 
                 Platform.runLater(() -> {
                     btnGuardar.setDisable(false);
-                    agregarLog("✅ Datos guardados para: " + referencia);
-                    agregarLog("📁 Estructura: " + gestorArchivosService.obtenerEstructuraCarpetas());
-                    mostrarAlerta("Éxito",
-                            "Datos guardados correctamente:\n" +
-                                    "• Huella: datos_biometricos/huellas/" + referencia + "_huella.jpg\n" +
-                                    "• JSON: datos_biometricos/registros/" + referencia + ".json\n" +
-                                    (fotoCapturada != null ? "• Foto: datos_biometricos/fotos/" + referencia + ".jpg\n" : "") +
-                                    (firmaCapturada != null ? "• Firma: datos_biometricos/firmas/" + referencia + ".jpg" : "")
-                    );
+                    agregarLog("✅ " + huellasCapturadas.size() + " huella(s) guardadas exitosamente para: " + referenciaActual);
 
-                    // Limpiar para nueva captura
-                    limpiarCapturas();
-                    txtFolio.clear();
-                    limpiarDatos();
+                    // ✅ MOSTRAR RESUMEN PERO NO LIMPIAR LA REFERENCIA
+                    mostrarResumenGuardadoCompleto(referenciaActual, huellasCapturadas);
+
+                    // ✅ SOLO LIMPIAR CAPTURAS PERO MANTENER REFERENCIA Y DATOS
+                    limpiarCapturasParcial();
+
+                    // ❌ NO limpiarDatos() - eso borra la referencia
+                    // ❌ NO txtFolio.clear() - eso borra el campo de texto
+
+                    agregarLog("💡 Referencia mantenida: " + referenciaActual + " - Lista para capturar más huellas");
                 });
 
             } catch (Exception e) {
@@ -327,68 +398,107 @@ public class MainController {
         // firmaCapturada = "base64_de_la_firma_aqui";
     }
 
-    private void mostrarResultadosHuella(HuellaResponse respuesta) {
-        if (respuesta == null) return;
+    private void mostrarResultadosHuella(HuellaResponse respuesta, int codigoDedo) {
+        System.out.println("🎯 INICIANDO mostrarResultadosHuella para dedo: " + codigoDedo);
+
+        if (respuesta == null) {
+            System.out.println("❌ Respuesta es null en mostrarResultadosHuella");
+            return;
+        }
+
+        String nombreDedo = MapeadorDedos.obtenerNombreDedo(codigoDedo);
 
         // Mostrar calidad
-        if (respuesta.getCalidad() != null) {
-            lblCalidad.setText(respuesta.getCalidad().toString() + "%");
-            pbCalidad.setProgress(respuesta.getCalidad() / 100.0);
+        Integer calidadMostrar = respuesta.getCalidadTotal();
+        String descripcionCalidad = respuesta.getDescripcionCalidad();
+
+        if (calidadMostrar != null) {
+            lblCalidad.setText(calidadMostrar.toString() + "% - " + descripcionCalidad);
+            pbCalidad.setProgress(calidadMostrar / 100.0);
 
             // Color según calidad
-            if (respuesta.getCalidad() >= 80) {
+            if (calidadMostrar >= 80) {
                 lblCalidad.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
-            } else if (respuesta.getCalidad() >= 60) {
+            } else if (calidadMostrar >= 60) {
                 lblCalidad.setStyle("-fx-text-fill: orange; -fx-font-weight: bold;");
             } else {
                 lblCalidad.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
             }
+
+            agregarLog("📊 Calidad " + nombreDedo + ": " + calidadMostrar + "% (" + descripcionCalidad + ")");
         }
 
         // Mostrar minucias
         if (respuesta.getMinucias() != null) {
-            lblMinucias.setText(respuesta.getMinucias().toString());
+            String minuciasTexto = respuesta.getMinuciasFormateadas();
+            lblMinucias.setText(minuciasTexto);
+            agregarLog("🔢 " + nombreDedo + " - " + minuciasTexto);
+        } else {
+            lblMinucias.setText("0 minucias");
         }
 
-        // Mostrar información del dedo si está disponible
-        if (respuesta.getDedo() != null && respuesta.getMano() != null) {
-            lblEstatus.setText("Huella " + respuesta.getMano() + " - Dedo " + respuesta.getDedo());
-        } else {
-            lblEstatus.setText("Huella Capturada");
+        // Mostrar información de la imagen
+        if (respuesta.tieneImagenWsqReal()) {
+            agregarLog("📷 " + nombreDedo + " - Imagen WSQ (" + respuesta.getImagenWsq().length() + " caracteres)");
         }
+
+        // Mostrar información del dedo
+        lblEstatus.setText(nombreDedo + " - Huella Capturada");
+        lblEstatus.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+
+        // HABILITAR BOTÓN GUARDAR
+        btnGuardar.setDisable(false);
+        agregarLog("💾 " + nombreDedo + " listo para guardar");
 
         // Mostrar panel de resultados
         panelResultados.setVisible(true);
 
-        // Habilitar botón guardar
-        btnGuardar.setDisable(false);
+        System.out.println("✅ FIN mostrarResultadosHuella - " + nombreDedo);
     }
 
-    private void limpiarCapturas() {
-        huellaCapturada = null;
-        fotoCapturada = null;
-        firmaCapturada = null;
-        btnGuardar.setDisable(true);
+    private void limpiarResultadosHuella() {
+        System.out.println("🧹 Limpiando resultados de huella");
+
+        lblCalidad.setText("0%");
+        lblMinucias.setText("0");
+        pbCalidad.setProgress(0);
+        lblEstatus.setText("No capturado");
+        lblEstatus.setStyle("-fx-text-fill: gray;");
+        lblCalidad.setStyle("-fx-text-fill: black;");
     }
 
     private void limpiarDatos() {
+        System.out.println("🔄 Limpiando TODOS los datos - Nuevo aspirante");
+
+        // Limpiar labels de datos del aspirante
         lblNombre.setText("N/A");
         lblFolio.setText("N/A");
         if (lblReferencia != null) {
             lblReferencia.setText("N/A");
         }
+
+        // Limpiar estado de captura
         lblEstatus.setText("No buscado");
         lblEstatus.setStyle("-fx-text-fill: gray;");
-        lblCalidad.setText("0%");
-        lblMinucias.setText("0");
-        pbCalidad.setProgress(0);
 
+        // Limpiar resultados de huella
+        limpiarResultadosHuella();
+
+        // Limpiar todas las variables
         referenciaActual = null;
-        huellaCapturada = null;
-        fotoCapturada = null;
-        firmaCapturada = null;
+        limpiarCapturas(); // Esto limpia el mapa completo
 
-        lblCalidad.setStyle("-fx-text-fill: black;");
+        // Limpiar campo de búsqueda
+        txtFolio.clear();
+
+        // Ocultar panel de resultados
+        panelResultados.setVisible(false);
+
+        // Deshabilitar botones
+        btnCapturar.setDisable(true);
+        btnGuardar.setDisable(true);
+
+        agregarLog("🧹 Todos los datos limpiados - Listo para nuevo aspirante");
     }
 
     private boolean validarReferencia(String referencia) {
@@ -425,4 +535,130 @@ public class MainController {
             alert.showAndWait();
         });
     }
+
+    private void mostrarResumenGuardado(String referencia, HuellaResponse huella) {
+        String mensaje = "Datos guardados correctamente:\n\n" +
+                "• Referencia: " + referencia + "\n" +
+                "• Calidad: " + huella.getDescripcionCalidad() + "\n" +
+                "• Minucias: " + huella.getMinuciasFormateadas() + "\n" +
+                "• JSON: datos_biometricos/registros/" + referencia + ".json\n" +
+                "• TXT: datos_biometricos/registros/" + referencia + ".txt";
+
+        if (huella.getImagenWsq() != null) {
+            mensaje += "\n• Huella WSQ: datos_biometricos/huellas/" + referencia + "_huella.wsq";
+        }
+
+        if (huella.getImagenBmp() != null) {
+            mensaje += "\n• Huella BMP: datos_biometricos/huellas/" + referencia + "_huella.bmp";
+        }
+
+        if (fotoCapturada != null) {
+            mensaje += "\n• Foto: datos_biometricos/fotos/" + referencia + ".jpg";
+        }
+
+        if (firmaCapturada != null) {
+            mensaje += "\n• Firma: datos_biometricos/firmas/" + referencia + ".jpg";
+        }
+
+        mostrarAlerta("Éxito", mensaje);
+    }
+
+    public void verificarEstado() {
+        System.out.println("=== ESTADO ACTUAL ===");
+        System.out.println("referenciaActual: " + referenciaActual);
+        System.out.println("huellaCapturada: " + (huellaCapturada != null));
+        System.out.println("btnGuardar disabled: " + btnGuardar.isDisabled());
+
+        if (huellaCapturada != null) {
+            System.out.println("Huella capturada - Éxito: " + huellaCapturada.isExitoso());
+            System.out.println("Imagen WSQ: " + (huellaCapturada.tieneImagenWsqReal() ?
+                    huellaCapturada.getImagenWsq().length() + " chars" : "no"));
+        }
+        System.out.println("=====================");
+    }
+
+    private void mostrarHuellaCapturada(int codigoDedo) {
+        HuellaResponse huella = huellasCapturadas.get(codigoDedo);
+        if (huella != null) {
+            mostrarResultadosHuella(huella, codigoDedo);
+            agregarLog("📁 Mostrando huella capturada previamente para: " + MapeadorDedos.obtenerNombreDedo(codigoDedo));
+        } else {
+            limpiarResultadosHuella();
+            agregarLog("💡 Listo para capturar: " + MapeadorDedos.obtenerNombreDedo(codigoDedo));
+        }
+    }
+
+    private void mostrarResumenHuellasCapturadas() {
+        if (!huellasCapturadas.isEmpty()) {
+            agregarLog("📋 Huellas capturadas: " + huellasCapturadas.size() + " dedo(s)");
+            for (Map.Entry<Integer, HuellaResponse> entry : huellasCapturadas.entrySet()) {
+                String nombreDedo = MapeadorDedos.obtenerNombreDedo(entry.getKey());
+                HuellaResponse huella = entry.getValue();
+                agregarLog("   • " + nombreDedo + ": " +
+                        huella.getCalidadTotal() + "% calidad, " +
+                        huella.getMinuciasFormateadas());
+            }
+        }
+    }
+
+    private void mostrarResumenGuardadoCompleto(String referencia, Map<Integer, HuellaResponse> huellas) {
+        StringBuilder mensaje = new StringBuilder();
+        mensaje.append("Datos guardados correctamente:\n\n");
+        mensaje.append("• Referencia: ").append(referencia).append("\n");
+        mensaje.append("• Huellas guardadas: ").append(huellas.size()).append(" dedo(s)\n\n");
+
+        for (Map.Entry<Integer, HuellaResponse> entry : huellas.entrySet()) {
+            int codigoDedo = entry.getKey();
+            HuellaResponse huella = entry.getValue();
+            String nombreDedo = MapeadorDedos.obtenerNombreDedo(codigoDedo);
+            String codigoArchivo = MapeadorDedos.obtenerCodigoArchivo(codigoDedo);
+
+            mensaje.append("• ").append(nombreDedo).append(":\n");
+            mensaje.append("  - Archivo: ").append(referencia).append("_").append(codigoArchivo).append(".wsq\n");
+            mensaje.append("  - Calidad: ").append(huella.getCalidadTotal()).append("%\n");
+            mensaje.append("  - Minucias: ").append(huella.getMinuciasFormateadas()).append("\n\n");
+        }
+
+        mensaje.append("¿Desea capturar más huellas para este mismo aspirante?\n\n");
+        mensaje.append("• Presione 'Capturar Huella' para agregar más dedos\n");
+        mensaje.append("• Presione 'Nueva Búsqueda' para buscar otro aspirante");
+
+        // Usar CONFIRMATION en lugar de INFORMATION
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Guardado Exitoso");
+        alert.setHeaderText("Huellas Guardadas Correctamente");
+        alert.setContentText(mensaje.toString());
+        alert.showAndWait();
+    }
+
+    private void limpiarCapturas() {
+        huellasCapturadas.clear();
+        fotoCapturada = null;
+        firmaCapturada = null;
+        btnGuardar.setDisable(true);
+        System.out.println("🧹 Todas las huellas capturadas fueron limpiadas");
+    }
+
+    private void limpiarCapturasParcial() {
+        int huellasAnteriores = huellasCapturadas.size();
+        huellasCapturadas.clear();
+        fotoCapturada = null;
+        firmaCapturada = null;
+        btnGuardar.setDisable(true);
+
+        // Limpiar solo los resultados de huella, no los datos del aspirante
+        limpiarResultadosHuella();
+
+        System.out.println("🧹 Capturas limpiadas (" + huellasAnteriores + " huellas) - Referencia mantenida: " + referenciaActual);
+        agregarLog("🧹 " + huellasAnteriores + " huella(s) limpiadas - Listo para capturar más");
+    }
+
+    @FXML
+    private void nuevaBusqueda() {
+        agregarLog("🔄 Iniciando nueva búsqueda...");
+        limpiarDatos(); // Esto limpia todo completamente
+        agregarLog("💡 Ingrese una nueva referencia para buscar");
+    }
+
+
 }

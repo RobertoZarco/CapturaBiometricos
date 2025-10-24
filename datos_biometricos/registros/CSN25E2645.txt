@@ -1,10 +1,12 @@
 REFERENCIA: CSN25E2645
-FECHA CAPTURA: 2025-10-17 01:03:33
-=== DATOS HUELLA ===
-Calidad: 84%
-Minucias: 49
-Dedo: 4
-Mano: izquierda
+FECHA CAPTURA: 2025-10-23 21:37:42
+TOTAL HUELLAS: 1
+
+=== DETALLE DE HUELLAS ===
+
+DEDO: Pulgar Derecho (Código: 5)
+Archivo: CSN25E2645_5.wsq
+Calidad: 1% - Excelente
+Minucias: 96 minucias
 Dispositivo: CROSSMATCH
-Exitoso: true
-Mensaje: Huella capturada exitosamente desde CROSSMATCH
+Éxito: SI
